@@ -2058,7 +2058,7 @@ function finalizeApproach(){
   // If global obj awarded a pending benefit, don't advance — set flag so it advances after
   if(hasPendingBenefits()){S._pendingBookingAdvance=true;renderAll();return;}
   if(document.getElementById('ticketNotif').classList.contains('show')){
-    S._deferredAdvance=true;return;
+    S._deferredAdvance=true;S.phase='game-processingEffects';return;
   }
   advanceGameTurn();renderAll();
 }
@@ -2232,12 +2232,14 @@ function closeStagePicker(){
   // If artist effect needs a draw UI (e.g. Peggy Gou), handle that
   if(S.pendingDrawEffect){
     S._pendingBookingAdvance=true;
+    S.phase='game-processingEffects';
     return;
   }
   
   // If global obj reward granted a draw, draw+refresh, or art obj reveal, handle via notification
   if(S.pendingGlobalObjDraw||S.pendingGlobalObjDrawRefresh||S._pendingArtObjReveal){
     S._pendingBookingAdvance=true;
+    S.phase='game-processingEffects';
     // These will be handled via the notification system — show any queued notifs
     if(S.notifQueue.length>0){
       const next=S.notifQueue.shift();
@@ -2249,6 +2251,7 @@ function closeStagePicker(){
   // If artist effect grants a bonus amenity, enter placement mode
   if(S.pendingBonusAmenity){
     S._pendingBookingAdvance=true;
+    S.phase='game-processingEffects';
     if(S.pendingBonusAmenity==='choice'){
       S.pendingBonusAmenity=null;
       showAmenityChoicePopup();return;
@@ -2271,7 +2274,7 @@ function closeStagePicker(){
   // After artist action, end turn
   S._pendingBookingAdvance=false;
   if(document.getElementById('ticketNotif').classList.contains('show')){
-    S._deferredAdvance=true;return;
+    S._deferredAdvance=true;S.phase='game-processingEffects';return;
   }
   advanceGameTurn();renderAll();
 }
@@ -2926,7 +2929,7 @@ function afterDrawEffect(){
   // Advance turn
   S._pendingBookingAdvance=false;
   if(document.getElementById('ticketNotif').classList.contains('show')){
-    S._deferredAdvance=true;return;
+    S._deferredAdvance=true;S.phase='game-processingEffects';return;
   }
   advanceGameTurn();renderAll();
 }
@@ -3794,7 +3797,10 @@ function onAmenityPlace(k){
   checkObjectives(S.cur);
   // If more benefits are pending, process them — but remember we need to advance turn after
   if(hasPendingBenefits()){
-    if(wasDiceAction)S._pendingDiceAdvance=true; // flag: advance turn after all benefits done
+    // Preserve the advance flag so it fires after all benefits are done
+    if(wasDiceAction)S._pendingDiceAdvance=true;
+    // Block the phase to prevent any further actions while benefits process
+    S.phase='game-processingEffects';
     processNextBenefit();
     return;
   }
@@ -3811,9 +3817,10 @@ function onAmenityPlace(k){
   
   if(shouldAdvance){
     // Check if a notification is currently showing (objective completion etc)
-    // If so, defer the advance to dismissNotif
+    // If so, defer the advance to dismissNotif and block further actions
     if(document.getElementById('ticketNotif').classList.contains('show')){
       S._deferredAdvance=true;
+      S.phase='game-processingEffects';
       return;
     }
     advanceGameTurn();renderAll();
